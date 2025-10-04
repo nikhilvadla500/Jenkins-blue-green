@@ -59,7 +59,7 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: ClusterIP 
+  type: LoadBalancer
 
 ---
 apiVersion: apps/v1
@@ -121,7 +121,7 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: ClusterIP 
+  type: LoadBalancer 
 
 ---
 apiVersion: v1
@@ -138,4 +138,4 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: LoadBalancer    
+  type: ClusterIP    
