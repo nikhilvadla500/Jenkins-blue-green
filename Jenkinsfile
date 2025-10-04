@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+
+    environment {
+        USE_GKE_GCLOUD_AUTH_PLUGIN = 'True'
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account') // Ensure service account JSON is available
+        GKE_CLUSTER_NAME = 'hdfc-cluster1' // Update with your GKE cluster name
+        GKE_PROJECT_ID = 'norse-strata-465507-a6' // Update with your GCP project ID
+        GKE_REGION = 'us-central1' // Update with your GKE cluster zone
+        GIT_REPO_URL = 'https://github.com/nikhilvadla500/Jenkins-blue-green.git'// Update with your Git repository URL
+        GIT_BRANCH = 'main' // Update with your branch name if needed (default is 'main')
+        KUBE_NAMESPACE = 'blue-green'
+    }
+
+    stages {
+        stage('Checkout Git Repository') {
+            steps {
+                script {
+                    // Checkout the Git repository containing your Kubernetes manifests
+                    git url: "${GIT_REPO_URL}", branch: "${GIT_BRANCH}"
+                }
+            }
+        }
+
+        stage('Authenticate with GCP') {
+            steps {
+                script {
+                    // Authenticate with GCP using the service account key
+                    sh 'gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}'
+                    sh 'gcloud config set project ${GKE_PROJECT_ID}'
+                    sh 'gcloud config set compute/region ${GKE_REGION}'
+                }
+            }
+        }
+
+        stage('Configure kubectl') {
+            steps {
+                script {
+                    // Get credentials for the GKE cluster
+                    sh 'gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} --region ${GKE_REGION} --project ${GKE_PROJECT_ID}'
+
+                }
+            }
+        }
+
+        stage('Deploy to GKE') {
+            steps {
+                script {
+                    // Apply the Kubernetes YAML files to deploy the app
+                    sh 'kubectl apply -f blue-green-deployment.yaml' // Specify the path to your YAML files after checkout
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    // Verify the deployment status
+                    sh 'kubectl get deployments -n ${KUBE_NAMESPACE}'
+                    sh 'kubectl get pods -n ${KUBE_NAMESPACE}'
+                    sh 'kubectl get svc -n ${KUBE_NAMESPACE}'
+                }
+            }
+        }
+    }
+}
